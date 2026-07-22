@@ -1,0 +1,33 @@
+I would like to create a python script that populates the table in a libreoffice impress or libreoffice writer file (both are give as templates) with values given by an external file.
+The output should be either a libreoffice impress or libreoffice writer file containing the filled in table.
+
+Arguments for the script should be the external file and a flag for whether it should create a impress or writer file.
+
+The name of the output file should be table_ plus the name of the external file. Instead of the .csv ending it should have .odt or .odp
+In addition, the output file should be created in the same directory as the python script is called.
+
+
+An example of the content of the external file is given here:
+File Name, Phase 0 Fraction, Phase 1 Fraction, Phase 2 Fraction, Phase 3 Fraction, Phase 4 Fraction, Phase 5 Fraction, Phase 6 Fraction, Phase 7 Fraction
+segmentedHiRes_GM_SS_AC_CAC_LC_SBCAk32p10_ASC_MS_ASC_ASCbreg_SSassay,         0.000022,         0.199944,         0.629375,         0.155023,         0.015171,         0.000431,         0.000022,         0.000011
+
+The number of values in the second line (corresponding to the comma separated 'Phase X Fraction' in the first line) are the input for the third column in the template table, starting with the second row.
+In addition, please convert the current fractions into percent by multiplying by 100. 
+
+The template tables can be found here:
+phasevoltable_empty.odp for impress
+phasevoltable_empty.odt for writer
+ 
+I would like to have Arial 11pt for the font, with the width of the first column, which contains the coloured backgrounds, similar to its height.
+The second column should have the title 'Phase' and the third column the title 'Vol [%]'
+
+The background colours in the first column should be as follows (in HTML colours):
+row 1: nothing (header)
+row 2: #000000
+row 3: #00ff00
+row 4: #ff0000
+row 5: #0000ff
+row 6: #00ffff
+row 7: #ff00ff
+row 8: #800000
+row 9: #000080
