@@ -1,0 +1,98 @@
+Summary: create_pvf_table
+=========================
+
+Goal
+----
+The script automates the creation of a phase volume fraction (PVF) table in
+either LibreOffice Writer or LibreOffice Impress. The table is intended to
+display, for each tissue or material phase, a colour-coded identifier and its
+volume percentage. Producing this table by hand for each dataset is repetitive
+and error-prone, so the script takes a CSV file as input and generates the
+finished document automatically.
+
+
+The ODF file format
+-------------------
+Both .odt (Writer) and .odp (Impress) files are ZIP archives containing XML
+files. The main content lives in content.xml, which describes the document
+structure, automatic styles, and body text. This means the documents can be
+read and written programmatically using Python's standard zipfile and
+xml.etree.ElementTree modules, with no dependency on LibreOffice itself.
+
+
+Approach: modify a template rather than build from scratch
+----------------------------------------------------------
+Rather than generating the full ODF XML from scratch (which would require
+reproducing every border, padding, and style attribute correctly), the script
+starts from hand-crafted template files — phasevoltable_empty.odt and
+phasevoltable_empty.odt — that already contain the correctly structured table
+with the right borders, padding, and cell layout. The script copies the
+template ZIP, parses content.xml, makes targeted changes, and writes the
+result to a new file.
+
+This keeps the code focused: it only needs to know about the things that
+change (cell text, colours, font, alignment), not the full document structure.
+
+
+XML namespace handling
+----------------------
+ODF XML uses around 30 XML namespaces. Python's ElementTree represents
+element and attribute names as expanded Clark-notation strings, e.g.
+{urn:oasis:names:tc:opendocument:xmlns:table:1.0}table-row. Before parsing,
+the script registers all known ODF namespace prefixes so that ElementTree
+serialises them back with the original short prefixes (table:, style:, fo:,
+etc.) rather than invented ns0:, ns1: substitutes that LibreOffice might
+reject.
+
+
+Template corrections
+--------------------
+The template files contained several mistakes that were corrected by the
+script at output time:
+
+  - In both formats, the background colours for Phase 3 (#0000ff, blue) and
+    Phase 4 (#00ffff, cyan) were swapped.
+  - In the Writer template, the Phase 5 cell had colour #ff1493 (deep pink)
+    instead of the correct #ff00ff (magenta).
+  - In the Impress template, Phase 6 used #a52a2a (brown) instead of #800000
+    (maroon).
+
+Fixing these in the output rather than the template files preserves the
+originals as references and ensures corrections are always applied.
+
+
+Formatting choices
+------------------
+- Font: Arial 11 pt was specified. In the Writer template the default font
+  is Liberation Sans inherited from the document theme; a new paragraph style
+  (P_PVF_B / P_PVF_C) with explicit Arial 11 pt is injected into the
+  automatic styles section of content.xml and applied to all filled cells.
+  In the Impress template the font was already Arial at 10 pt; the size is
+  updated to 11 pt across all relevant cell and text styles.
+
+- Column alignment: the Phase column (col B) is centre-aligned; the Vol [%]
+  column (col C) is right-aligned. In Writer this is expressed as a paragraph
+  fo:text-align property. In Impress it is the same, with the right-side gap
+  implemented as fo:margin-right on the paragraph rather than as cell padding,
+  because Impress cell padding lives in a separate graphics-properties layer
+  that would require creating entirely new cell styles.
+
+- Right padding on Vol [%]: 0.3 inches (0.762 cm) of space is kept between
+  the number and the right cell border, providing visual breathing room.
+
+- First column width: set to approximately the row height so the colour
+  swatch cell appears square. In Writer this is 0.25 in; in Impress it
+  matches the pre-existing row height of 0.831 cm.
+
+- Variable phase count: the CSV may contain anywhere from 1 to 8 phase
+  columns. The script fills only as many rows as the data provides and removes
+  the remaining template rows, so the output table is always the exact right
+  size.
+
+
+Output naming
+-------------
+The output file is named table_<stem>.<ext>, where <stem> is the CSV filename
+without its extension and <ext> is odt or odp. It is written to the directory
+from which the script is called, not to the script's own directory, so it
+lands wherever the user is working.
