@@ -92,68 +92,10 @@ def modify_odt_content(xml_bytes, phase_labels, fractions):
     _register_namespaces(xml_bytes)
     root = ET.fromstring(xml_bytes)
 
-    # Add Arial font face if missing
-    font_decls = root.find(_T('office', 'font-face-decls'))
-    if font_decls is not None:
-        has_arial = any(
-            e.get(_T('style', 'name')) == 'Arial'
-            for e in font_decls.findall(_T('style', 'font-face'))
-        )
-        if not has_arial:
-            arial = ET.SubElement(font_decls, _T('style', 'font-face'))
-            arial.set(_T('style', 'name'), 'Arial')
-            arial.set(_T('svg', 'font-family'), 'Arial')
-
-    auto_styles = root.find(_T('office', 'automatic-styles'))
-
-    # Colors that are wrong in the template and must be corrected
-    odt_color_fixes = {
-        'Table1.A5': '#0000ff',  # Phase 3
-        'Table1.A6': '#00ffff',  # Phase 4
-        'Table1.A7': '#ff00ff',  # Phase 5
-    }
-
-    for style_el in auto_styles.findall(_T('style', 'style')):
-        name = style_el.get(_T('style', 'name'))
-        family = style_el.get(_T('style', 'family'))
-
-        if name == 'Table1.A' and family == 'table-column':
-            props = style_el.find(_T('style', 'table-column-properties'))
-            if props is not None:
-                props.set(_T('style', 'column-width'), '0.25in')
-
-        if name in odt_color_fixes and family == 'table-cell':
-            cell_props = style_el.find(_T('style', 'table-cell-properties'))
-            if cell_props is not None:
-                cell_props.set(_T('fo', 'background-color'), odt_color_fixes[name])
-
-        if name.startswith('Table1.C') and family == 'table-cell':
-            cell_props = style_el.find(_T('style', 'table-cell-properties'))
-            if cell_props is not None:
-                cell_props.set(_T('fo', 'padding-right'), '0.3in')
-
-    def _add_para_style(name, align):
-        s = ET.SubElement(auto_styles, _T('style', 'style'))
-        s.set(_T('style', 'name'), name)
-        s.set(_T('style', 'family'), 'paragraph')
-        s.set(_T('style', 'parent-style-name'), 'Table_20_Contents')
-        pp = ET.SubElement(s, _T('style', 'paragraph-properties'))
-        pp.set(_T('fo', 'text-align'), align)
-        tp = ET.SubElement(s, _T('style', 'text-properties'))
-        tp.set(_T('style', 'font-name'), 'Arial')
-        tp.set(_T('fo', 'font-size'), '11pt')
-        tp.set(_T('style', 'font-size-asian'), '11pt')
-        tp.set(_T('style', 'font-size-complex'), '11pt')
-
-    _add_para_style('P_PVF_B', 'center')
-    _add_para_style('P_PVF_C', 'end')
-
-    def set_cell_text(cell, text, style):
-        for child in list(cell):
-            if child.tag == _T('text', 'p'):
-                cell.remove(child)
-        p = ET.SubElement(cell, _T('text', 'p'))
-        p.set(_T('text', 'style-name'), style)
+    def set_cell_text(cell, text):
+        p = cell.find(_T('text', 'p'))
+        if p is None:
+            p = ET.SubElement(cell, _T('text', 'p'))
         p.text = text
 
     office_text = root.find(_T('office', 'body')).find(_T('office', 'text'))
@@ -161,15 +103,15 @@ def modify_odt_content(xml_bytes, phase_labels, fractions):
     rows = table_el.findall(_T('table', 'table-row'))
 
     header_cells = rows[0].findall(_T('table', 'table-cell'))
-    set_cell_text(header_cells[1], 'Phase', 'P_PVF_B')
-    set_cell_text(header_cells[2], 'Vol [%]', 'P_PVF_C')
+    set_cell_text(header_cells[1], 'Phase')
+    set_cell_text(header_cells[2], 'Vol [%]')
 
     for i, row in enumerate(rows[1:]):
         cells = row.findall(_T('table', 'table-cell'))
         if i < len(phase_labels):
-            set_cell_text(cells[1], phase_labels[i], 'P_PVF_B')
+            set_cell_text(cells[1], phase_labels[i])
         if i < len(fractions):
-            set_cell_text(cells[2], f'{fractions[i] * 100:.4f}', 'P_PVF_C')
+            set_cell_text(cells[2], f'{fractions[i] * 100:.4f}')
 
     for row in rows[len(phase_labels) + 1:]:
         table_el.remove(row)
@@ -181,57 +123,15 @@ def modify_odp_content(xml_bytes, phase_labels, fractions):
     _register_namespaces(xml_bytes)
     root = ET.fromstring(xml_bytes)
 
-    auto_styles = root.find(_T('office', 'automatic-styles'))
-
-    odp_color_fixes = {
-        'ce6': '#0000ff',  # Phase 3
-        'ce7': '#00ffff',  # Phase 4
-        'ce9': '#800000',  # Phase 6
-    }
-
-    for style_el in auto_styles.findall(_T('style', 'style')):
-        name = style_el.get(_T('style', 'name'))
-        family = style_el.get(_T('style', 'family'))
-
-        if name == 'co1' and family == 'table-column':
-            props = style_el.find(_T('style', 'table-column-properties'))
-            if props is not None:
-                props.set(_T('style', 'column-width'), '0.831cm')
-
-        if name in odp_color_fixes and family == 'table-cell':
-            gp = style_el.find(_T('loext', 'graphic-properties'))
-            if gp is not None:
-                gp.set(_T('draw', 'fill-color'), odp_color_fixes[name])
-
-        # Update font size 10pt -> 11pt in all text-property elements
-        for tp in style_el.findall('.//' + _T('style', 'text-properties')):
-            for attr in (
-                _T('fo', 'font-size'),
-                _T('style', 'font-size-asian'),
-                _T('style', 'font-size-complex'),
-            ):
-                if tp.get(attr) == '10pt':
-                    tp.set(attr, '11pt')
-
-    # Paragraph styles for column alignment; 0.762cm = 0.3in right margin for col C
-    for name, align, margin_right in [('P_B', 'center', None), ('P_C', 'right', '0.762cm')]:
-        s = ET.SubElement(auto_styles, _T('style', 'style'))
-        s.set(_T('style', 'name'), name)
-        s.set(_T('style', 'family'), 'paragraph')
-        pp = ET.SubElement(s, _T('style', 'paragraph-properties'))
-        pp.set(_T('fo', 'text-align'), align)
-        if margin_right:
-            pp.set(_T('fo', 'margin-right'), margin_right)
-
-    def set_cell_text(cell, text, para_style):
-        for child in list(cell):
-            if child.tag == _T('text', 'p'):
-                cell.remove(child)
-        p = ET.SubElement(cell, _T('text', 'p'))
-        p.set(_T('text', 'style-name'), para_style)
-        span = ET.SubElement(p, _T('text', 'span'))
-        span.set(_T('text', 'style-name'), 'T2')
-        span.text = text
+    def set_cell_text(cell, text):
+        p = cell.find(_T('text', 'p'))
+        if p is None:
+            p = ET.SubElement(cell, _T('text', 'p'))
+        span = p.find(_T('text', 'span'))
+        if span is not None:
+            span.text = text
+        else:
+            p.text = text
 
     office_presentation = root.find(_T('office', 'body')).find(_T('office', 'presentation'))
     draw_page = office_presentation.find(_T('draw', 'page'))
@@ -249,15 +149,15 @@ def modify_odp_content(xml_bytes, phase_labels, fractions):
     rows = table.findall(_T('table', 'table-row'))
 
     header_cells = rows[0].findall(_T('table', 'table-cell'))
-    set_cell_text(header_cells[1], 'Phase', 'P_B')
-    set_cell_text(header_cells[2], 'Vol [%]', 'P_C')
+    set_cell_text(header_cells[1], 'Phase')
+    set_cell_text(header_cells[2], 'Vol [%]')
 
     for i, row in enumerate(rows[1:]):
         cells = row.findall(_T('table', 'table-cell'))
         if i < len(phase_labels):
-            set_cell_text(cells[1], phase_labels[i], 'P_B')
+            set_cell_text(cells[1], phase_labels[i])
         if i < len(fractions):
-            set_cell_text(cells[2], f'{fractions[i] * 100:.4f}', 'P_C')
+            set_cell_text(cells[2], f'{fractions[i] * 100:.4f}')
 
     for row in rows[len(phase_labels) + 1:]:
         table.remove(row)
