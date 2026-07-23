@@ -180,8 +180,8 @@ def main():
     )
     parser.add_argument('csv_file', help='Input CSV file with phase fractions')
     parser.add_argument(
-        '--format', choices=['writer', 'impress'], required=True,
-        help='Output format: writer (.odt) or impress (.odp)',
+        '--format', choices=['writer', 'impress'], default='impress',
+        help='Output format: writer (.odt) or impress (.odp) [default: impress]',
     )
     args = parser.parse_args()
 
