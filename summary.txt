@@ -31,7 +31,7 @@ template ZIP, parses content.xml, makes targeted changes, and writes the
 result to a new file.
 
 This keeps the code focused: it only needs to know about the things that
-change (cell text, colours, font, alignment), not the full document structure.
+change (cell text), not the full document structure.
 
 
 XML namespace handling
@@ -45,49 +45,14 @@ etc.) rather than invented ns0:, ns1: substitutes that LibreOffice might
 reject.
 
 
-Template corrections
+Variable phase count
 --------------------
-The template files contained several mistakes that were corrected by the
-script at output time:
+The CSV may contain anywhere from 1 to 8 phase columns. The script fills
+only as many rows as the data provides and removes the remaining template
+rows, so the output table is always the exact right size.
 
-  - In both formats, the background colours for Phase 3 (#0000ff, blue) and
-    Phase 4 (#00ffff, cyan) were swapped.
-  - In the Writer template, the Phase 5 cell had colour #ff1493 (deep pink)
-    instead of the correct #ff00ff (magenta).
-  - In the Impress template, Phase 6 used #a52a2a (brown) instead of #800000
-    (maroon).
-
-Fixing these in the output rather than the template files preserves the
-originals as references and ensures corrections are always applied.
-
-
-Formatting choices
-------------------
-- Font: Arial 11 pt was specified. In the Writer template the default font
-  is Liberation Sans inherited from the document theme; a new paragraph style
-  (P_PVF_B / P_PVF_C) with explicit Arial 11 pt is injected into the
-  automatic styles section of content.xml and applied to all filled cells.
-  In the Impress template the font was already Arial at 10 pt; the size is
-  updated to 11 pt across all relevant cell and text styles.
-
-- Column alignment: the Phase column (col B) is centre-aligned; the Vol [%]
-  column (col C) is right-aligned. In Writer this is expressed as a paragraph
-  fo:text-align property. In Impress it is the same, with the right-side gap
-  implemented as fo:margin-right on the paragraph rather than as cell padding,
-  because Impress cell padding lives in a separate graphics-properties layer
-  that would require creating entirely new cell styles.
-
-- Right padding on Vol [%]: 0.3 inches (0.762 cm) of space is kept between
-  the number and the right cell border, providing visual breathing room.
-
-- First column width: set to approximately the row height so the colour
-  swatch cell appears square. In Writer this is 0.25 in; in Impress it
-  matches the pre-existing row height of 0.831 cm.
-
-- Variable phase count: the CSV may contain anywhere from 1 to 8 phase
-  columns. The script fills only as many rows as the data provides and removes
-  the remaining template rows, so the output table is always the exact right
-  size.
+All formatting — background colours, font, alignment, column widths, and
+padding — is defined in the template files and left untouched by the script.
 
 
 Output naming

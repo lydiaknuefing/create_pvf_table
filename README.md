@@ -34,7 +34,7 @@ A three-column table with one row per phase:
 |          | Phase 1 | 19.9944  |
 | …        | …       | …        |
 
-Column widths, background colours, font (Arial 11 pt), and alignment are applied automatically.
+Column widths, background colours, font, and alignment come from the template files.
 
 ## Dependencies
 
