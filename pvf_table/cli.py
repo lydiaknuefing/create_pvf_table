@@ -91,11 +91,26 @@ def modify_odt_content(xml_bytes, phase_labels, fractions):
     _register_namespaces(xml_bytes)
     root = ET.fromstring(xml_bytes)
 
-    def set_cell_text(cell, text):
+    def set_cell_text(cell, text, para_style=None):
         p = cell.find(_T('text', 'p'))
         if p is None:
             p = ET.SubElement(cell, _T('text', 'p'))
+        if para_style is not None:
+            p.set(_T('text', 'style-name'), para_style)
         p.text = text
+
+    # Patch P3 (the centred paragraph style) to have zero margins so the
+    # centre point is not shifted by any indent inherited from Table_20_Contents.
+    auto_styles = root.find(_T('office', 'automatic-styles'))
+    for style_el in auto_styles.findall(_T('style', 'style')):
+        if style_el.get(_T('style', 'name')) == 'P3':
+            pp = style_el.find(_T('style', 'paragraph-properties'))
+            if pp is None:
+                pp = ET.SubElement(style_el, _T('style', 'paragraph-properties'))
+            pp.set(_T('fo', 'margin-left'),  '0cm')
+            pp.set(_T('fo', 'margin-right'), '0cm')
+            pp.set(_T('fo', 'text-indent'),  '0cm')
+            break
 
     office_text = root.find(_T('office', 'body')).find(_T('office', 'text'))
     table_el = office_text.find(_T('table', 'table'))
@@ -110,7 +125,8 @@ def modify_odt_content(xml_bytes, phase_labels, fractions):
         if i < len(phase_labels):
             set_cell_text(cells[1], phase_labels[i])
         if i < len(fractions):
-            set_cell_text(cells[2], f'{fractions[i] * 100:.4f}')
+            # P3 is the centred paragraph style defined in the template
+            set_cell_text(cells[2], f'{fractions[i] * 100:.4f}', para_style='P3')
 
     for row in rows[len(phase_labels) + 1:]:
         table_el.remove(row)
